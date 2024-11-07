@@ -42,15 +42,21 @@ architecture Behavioral of VideoGame is
   signal clk2 : std_logic;
 
   -- ball
-  constant br : integer := 7;
+  constant br : integer := 10;
+  constant vel : integer := 2;
+  constant offset : integer := 4;
   signal bx : integer := 320;
   signal by : integer := 240;
-  signal bx_dir : integer := -1;
-  signal by_dir : integer := 1;
-  signal btli : integer := 0;
-  signal btri : integer := 0;
-  signal bbli : integer := 0;
-  signal bbri : integer := 0;
+  signal bx_dir : integer := 2;
+  signal by_dir : integer := 2;
+  
+  -- paddle
+  constant pw : integer := 5;
+  constant ph : integer := 40;
+  signal p1x : integer := 75;
+  signal p1y : integer := 240;
+  signal p2x : integer := 565;
+  signal p2y : integer := 240;
 
   type game_state is (START, RUN, FIN);
   signal current_state : game_state := START;
@@ -61,16 +67,16 @@ architecture Behavioral of VideoGame is
   signal grid : vec2 := (
     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
     (0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0),
-    (0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
-    (0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
-    (0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
-    (0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
+    (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0),
+    (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0),
     (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
-    (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
+    (0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0),
+    (0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
+    (0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0),
     (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0),
+    (0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
     (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
-    (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
-    (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
+    (0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0),
     (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
     (0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0),
     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -95,7 +101,7 @@ architecture Behavioral of VideoGame is
   begin
     if (clk'Event and clk='1') then
       clk2 <= not clk2;
-		DAC_CLK <= clk2;
+    DAC_CLK <= clk2;
     end if;
   end process;
 
@@ -121,7 +127,7 @@ architecture Behavioral of VideoGame is
       else
         hpos <= hpos + 1;
       end if;
-		
+    
       if (vpos = (480 + 10 + 2 + 33)) then
         vpos <= 0;
         video_strb <= '1';
@@ -131,8 +137,12 @@ architecture Behavioral of VideoGame is
       end if;
 
 
-      if ((bx - br) <= hpos and hpos <= (bx + br) and (by - br) <= vpos and vpos <= (by + br)) then 
+      if ((bx - br) <= hpos and hpos <= (bx + br) and (by - br) <= vpos and vpos <= (by + br)) then
         col <= "0100";
+      elsif ((p1x - pw) <= hpos and hpos <= (p1x + pw) and (p1y - ph) <= vpos and vpos <= (p1y + ph)) then
+        col <= "0010";
+      elsif ((p2x - pw) <= hpos and hpos <= (p2x + pw) and (p2y - ph) <= vpos and vpos <= (p2y + ph)) then
+        col <= "0011";
       else
         gx <= hpos / block_size;
         gy <= vpos / block_size;
@@ -156,24 +166,25 @@ architecture Behavioral of VideoGame is
           current_state <= RUN;
 
         when RUN =>
+          if (grid((by + br) / block_size, (bx - br - offset) / block_size) = 1 or grid((by - br) / block_size, (bx - br - offset) / block_size) = 1) then
+            bx_dir <= vel;
+            bx <= vel;
+          end if;
+          if (grid((by + br) / block_size, (bx + br + offset) / block_size) = 1 or grid((by - br) / block_size, (bx + br + offset) / block_size) = 1) then
+            bx_dir <= -vel;
+            bx <= -vel;
+          end if;
+          if (grid((by - br - offset) / block_size, (bx + br) / block_size) = 1 or grid((by - br - offset) / block_size, (bx - br) / block_size) = 1) then
+            by_dir <= vel;
+            by <= vel;
+          end if;
+          if (grid((by + br + offset) / block_size, (bx + br) / block_size) = 1 or grid((by + br + offset) / block_size, (bx - br) / block_size) = 1) then
+            by_dir <= -vel;
+            by <= -vel;
+          end if;
+          
           bx <= bx + bx_dir;
           by <= by + by_dir;
-
-          btli <= grid((by - br) / block_size, (bx - br) / block_size);
-          btri <= grid((by - br) / block_size, (bx + br) / block_size);
-          bbli <= grid((by + br) / block_size, (bx - br) / block_size);
-          bbri <= grid((by + br) / block_size, (bx + br) / block_size);
-
-          if ((btli = 1 and bbli = 1) or (btri = 1 and bbri = 1)) then
-            bx_dir <= -bx_dir;
-				bx <= bx + 4 * bx_dir;
-          end if;
-
-          if ((btli = 1 and btri = 1) or (bbli = 1 and bbri = 1)) then
-            by_dir <= -by_dir;
-				by <= by + 4 * by_dir;
-          end if;
-
         when FIN =>
       end case;
     end if;
