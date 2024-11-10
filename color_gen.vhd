@@ -17,38 +17,10 @@ begin
   process(clk)
   begin
     if (clk'Event and clk = '1') then
-      case col is
-        when "0000" =>
-          Rout <= "00000000";
-          Gout <= "11111111";
-          Bout <= "00000000";
-
-        when "0001" =>
-          Rout <= "11111111";
-          Gout <= "11111111";
-          Bout <= "11111111";
-
-        when "0010" =>
-          Rout <= "11111111";
-          Gout <= "00000000";
-          Bout <= "00000000";
-
-        when "0011" =>
-          Rout <= "00000000";
-          Gout <= "00000000";
-          Bout <= "11111111";
-
-        when "0100" =>
-          Rout <= "11111111";
-          Gout <= "11111111";
-          Bout <= "00000000";
-
-        when others =>
-          Rout <= "00000000";
-          Gout <= "00000000";
-          Bout <= "00000000";
-      end case;
-    end if;
+      Rout <= (others => col(3));
+      Gout <= (others => col(2));
+      Bout <= (others => col(1));
+        end if;
   end process;
 
 end Behavioral;

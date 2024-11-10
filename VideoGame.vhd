@@ -138,19 +138,23 @@ architecture Behavioral of VideoGame is
 
 
       if ((bx - br) <= hpos and hpos <= (bx + br) and (by - br) <= vpos and vpos <= (by + br)) then
-        col <= "0100";
+        col <= "110";
       elsif ((p1x - pw) <= hpos and hpos <= (p1x + pw) and (p1y - ph) <= vpos and vpos <= (p1y + ph)) then
-        col <= "0010";
+        col <= "100";
       elsif ((p2x - pw) <= hpos and hpos <= (p2x + pw) and (p2y - ph) <= vpos and vpos <= (p2y + ph)) then
-        col <= "0011";
+        col <= "001";
       else
         gx <= hpos / block_size;
         gy <= vpos / block_size;
 
         if (gx <= 20 and gy <= 15) then
-          col <= std_logic_vector(to_unsigned(grid(gy, gx), 4));
+          if (grid(gy, gx) = 1) then
+            col <= "111";
+          else
+            col <= "010";
+          end if;
         else 
-          col <= "1111";
+          col <= "000";
         end if;
       end if;
     end if;
