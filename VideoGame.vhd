@@ -40,6 +40,8 @@ architecture Behavioral of VideoGame is
   signal vpos : integer := 0;
   signal video_strb : std_logic := '0';
   signal clk2 : std_logic;
+  signal winner : std_logic := '0';
+  signal sleep : integer := 0;
 
   -- ball
   constant br : integer := 10;
@@ -67,20 +69,34 @@ architecture Behavioral of VideoGame is
   signal grid : vec2 := (
     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
     (0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0),
-    (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0),
-    (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0),
     (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
-    (0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0),
-    (0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
-    (0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0),
-    (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0),
-    (0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
     (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
-    (0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0),
+    (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
+    (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
+    (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
+    (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
     (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
     (0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0),
     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
   );
+
+---------------------------------------------------------
+-- functions
+---------------------------------------------------------
+function state_to_bin(state: cache_state) return std_logic_vector is
+  begin
+  case state is
+    when START => return "00";
+    when RUN => return "01";
+    when FIN => return "10";
+    when others => return "11";
+  end case;
+end function;
+
 ---------------------------------------------------------
 -- port maps
 ---------------------------------------------------------
@@ -92,7 +108,7 @@ architecture Behavioral of VideoGame is
       Bout => Bout,
       Gout => Gout
     );
-
+  
 ---------------------------------------------------------
 -- process
 ---------------------------------------------------------
@@ -138,7 +154,11 @@ architecture Behavioral of VideoGame is
 
 
       if ((bx - br) <= hpos and hpos <= (bx + br) and (by - br) <= vpos and vpos <= (by + br)) then
-        col <= "110";
+        if (current_state = FIN) then
+          col <= "000";
+        else
+          col <= "110";
+        end if;
       elsif ((p1x - pw) <= hpos and hpos <= (p1x + pw) and (p1y - ph) <= vpos and vpos <= (p1y + ph)) then
         col <= "100";
       elsif ((p2x - pw) <= hpos and hpos <= (p2x + pw) and (p2y - ph) <= vpos and vpos <= (p2y + ph)) then
@@ -167,9 +187,44 @@ architecture Behavioral of VideoGame is
         when START =>
           bx <= 320;
           by <= 240;
-          current_state <= RUN;
+
+          if (sleep = 0) then
+            sleep <= 100;
+          else
+            sleep <= sleep - 1;
+            if (sleep = 0) then
+              current_state <= RUN;
+            end if;
+          end if;
 
         when RUN =>
+          -- paddle movement
+          if (p1 = '1') then
+            p1y <= p1y - vel;
+          else
+            p1y <= p1y + vel;
+          end if;
+
+          if (p2 = '1') then
+            p2y <= p2y - vel;
+          else
+            p2y <= p2y + vel;
+          end if;
+
+          -- paddle restriction
+          if ((p1y + ph) > 480) then
+            p1y <= 480 - ph - block_size * 2.1;
+          elsif ((p1y - ph) < 0) then
+            p1y <= ph + block_size * 2.1;
+          end if;
+
+          if ((p2y + ph) > 480) then
+            p2y <= 480 - ph - block_size * 2.1;
+          elsif ((p2y - ph) < 0) then
+            p2y <= ph + block_size * 2.1;
+          end if;
+          
+          -- ball collision
           if (grid((by + br) / block_size, (bx - br - offset) / block_size) = 1 or grid((by - br) / block_size, (bx - br - offset) / block_size) = 1) then
             bx_dir <= vel;
             bx <= vel;
@@ -187,9 +242,30 @@ architecture Behavioral of VideoGame is
             by <= -vel;
           end if;
           
+          -- ball movement
           bx <= bx + bx_dir;
           by <= by + by_dir;
+
+          -- score
+          if (grid((by + br) / block_size, (bx - br) / block_size) = 2 or grid((by - br) / block_size, (bx - br) / block_size) = 2) then
+            current_state <= FIN;
+            winner <= '1';
+          end if;
+
+          if (grid((by + br) / block_size, (bx + br) / block_size) = 2 or grid((by - br) / block_size, (bx + br) / block_size) = 2) then
+            current_state <= FIN;
+            winner <= '2';
+          end if;
+
         when FIN =>
+          if (sleep = 0) then
+            sleep <= 100;
+          else
+            sleep <= sleep - 1;
+            if (sleep = 0) then
+              current_state <= START;
+            end if;
+          end if;     
       end case;
     end if;
   end process;
