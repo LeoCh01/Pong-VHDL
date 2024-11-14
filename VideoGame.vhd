@@ -74,11 +74,11 @@ architecture Behavioral of VideoGame is
     (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
     (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
     (2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2),
+    (2, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 2),
+    (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2),
     (2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 2),
     (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
     (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
@@ -144,7 +144,7 @@ architecture Behavioral of VideoGame is
 
       if ((bx - br) <= hpos and hpos <= (bx + br) and (by - br) <= vpos and vpos <= (by + br)) then
         if (current_state = FIN) then
-          col <= "000";
+          col <= "100";
         else
           col <= "110";
         end if;
@@ -176,6 +176,8 @@ architecture Behavioral of VideoGame is
         when START =>
           bx <= 320;
           by <= 240;
+			 p1y <= 240;
+          p2y <= 240;
 
           if (sleep = 0) then
             sleep <= 50;
@@ -193,19 +195,6 @@ architecture Behavioral of VideoGame is
             current_state <= FIN;
           end if;
 
-          -- paddle restrictions
-          if ((p1y + ph) > 480 - (block_size * 2)) then
-            p1y <= 480 - (block_size * 2) - ph;
-          elsif ((p1y - ph) < (block_size * 2)) then
-            p1y <= (block_size * 2) + ph;
-          end if;
-
-          if ((p2y + ph) > 480 - (block_size * 2)) then
-            p2y <= 480 - (block_size * 2) - ph;
-          elsif ((p2y - ph) < (block_size * 2)) then
-            p2y <= (block_size * 2) + ph;          
-          end if;
-
           -- paddle movement
           if (p1 = '1') then
             p1y <= p1y - vel;
@@ -219,44 +208,49 @@ architecture Behavioral of VideoGame is
             p2y <= p2y + vel;
           end if;
 
-          -- paddle collision
-          if ((p1x - pw) <= (bx + br) and (bx + br) <= (p1x + pw) and (p1y - ph) <= (by + br) and (by + br) <= (p1y + ph)) then
-            bx_dir <= vel;
-            bx <= vel;
-            is_col <= 1;
+          -- paddle restrictions
+          if ((p1y + ph) > 480 - (block_size * 2)) then
+            p1y <= 480 - (block_size * 2) - ph;
+          elsif ((p1y - ph) < (block_size * 2)) then
+            p1y <= (block_size * 2) + ph;
           end if;
 
-          if ((p2x - pw) <= (bx - br) and (bx - br) <= (p2x + pw) and (p2y - ph) <= (by + br) and (by + br) <= (p2y + ph)) then
-            bx_dir <= -vel;
-            bx <= -vel;
-            is_col <= 1;
+          if ((p2y + ph) > 480 - (block_size * 2)) then
+            p2y <= 480 - (block_size * 2) - ph;
+          elsif ((p2y - ph) < (block_size * 2)) then
+            p2y <= (block_size * 2) + ph;          
           end if;
           
-          -- ball movement
-          bx <= bx + bx_dir;
-          by <= by + by_dir;
-          
-          -- ball collision
+          -- ball-paddle collision
+          if ((p1x - pw) <= (bx - br) and (bx - br) <= (p1x + pw) and (p1y - ph) <= (by + br) and (by - br) <= (p1y + ph)) then
+            bx_dir <= vel;
+          end if;
+
+          if ((p2x - pw) <= (bx + br) and (bx + br) <= (p2x + pw) and (p2y - ph) <= (by + br) and (by - br) <= (p2y + ph)) then
+            bx_dir <= -vel;
+          end if;
+                 
+          -- ball-wall collision
           if (grid((by + br) / block_size, (bx - br - offset) / block_size) = 1 or grid((by - br) / block_size, (bx - br - offset) / block_size) = 1) then
             bx_dir <= vel;
-            bx <= vel;
-            is_col <= 1;
+            bx <= bx + vel;
           end if;
           if (grid((by + br) / block_size, (bx + br + offset) / block_size) = 1 or grid((by - br) / block_size, (bx + br + offset) / block_size) = 1) then
             bx_dir <= -vel;
-            bx <= -vel;
-            is_col <= 1;
+            bx <= bx - vel;
           end if;
           if (grid((by - br - offset) / block_size, (bx + br) / block_size) = 1 or grid((by - br - offset) / block_size, (bx - br) / block_size) = 1) then
             by_dir <= vel;
-            by <= vel;
-            is_col <= 1;
+            by <= bx + vel;
           end if;
           if (grid((by + br + offset) / block_size, (bx + br) / block_size) = 1 or grid((by + br + offset) / block_size, (bx - br) / block_size) = 1) then
             by_dir <= -vel;
-            by <= -vel;
-            is_col <= 1;
+            by <= bx - vel;
           end if;
+			 
+			 -- ball movement
+          bx <= bx + bx_dir;
+          by <= by + by_dir;
 
           -- score
           if (grid((by + br) / block_size, (bx - br) / block_size) = 2 or grid((by - br) / block_size, (bx - br) / block_size) = 2) then
@@ -271,7 +265,7 @@ architecture Behavioral of VideoGame is
 
         when FIN =>
           if (sleep = 0) then
-			   bx_dir <= -bx_dir;
+            bx_dir <= -bx_dir;
             sleep <= 50;
           else
             sleep <= sleep - 1;
