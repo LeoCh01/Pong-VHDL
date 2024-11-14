@@ -297,7 +297,6 @@ architecture Behavioral of VideoGame is
           by <= by + by_dir;
 
           if (sleep = 0) then
-            bx_dir <= -bx_dir;
             sleep <= 50;
           else
             sleep <= sleep - 1;
@@ -309,10 +308,11 @@ architecture Behavioral of VideoGame is
         when GONE =>
         is_face <= 1;
         if (sleep = 0) then
+				bx_dir <= -bx_dir;
             by <= -100;
 				p1y <= -100;
 				p2y <= -100;
-            sleep <= 50;
+            sleep <= 25;
           else
             sleep <= sleep - 1;
             if (sleep = 1) then
