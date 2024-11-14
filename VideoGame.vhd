@@ -194,15 +194,15 @@ architecture Behavioral of VideoGame is
           end if;
 
           -- paddle restrictions
-          if ((p1y + ph) >= 480 - (block_size * 2)) then
+          if ((p1y + ph) > 480 - (block_size * 2)) then
             p1y <= 480 - (block_size * 2) - ph;
-          elsif ((p1y - ph) <= (block_size * 2)) then
+          elsif ((p1y - ph) < (block_size * 2)) then
             p1y <= (block_size * 2) + ph;
           end if;
 
-          if ((p2y + ph) >= 480 - (block_size * 2)) then
+          if ((p2y + ph) > 480 - (block_size * 2)) then
             p2y <= 480 - (block_size * 2) - ph;
-          elsif ((p2y - ph) <= (block_size * 2)) then
+          elsif ((p2y - ph) < (block_size * 2)) then
             p2y <= (block_size * 2) + ph;          
           end if;
 
@@ -218,6 +218,23 @@ architecture Behavioral of VideoGame is
           else
             p2y <= p2y + vel;
           end if;
+
+          -- paddle collision
+          if ((p1x - pw) <= (bx + br) and (bx + br) <= (p1x + pw) and (p1y - ph) <= (by + br) and (by + br) <= (p1y + ph)) then
+            bx_dir <= vel;
+            bx <= vel;
+            is_col <= 1;
+          end if;
+
+          if ((p2x - pw) <= (bx - br) and (bx - br) <= (p2x + pw) and (p2y - ph) <= (by + br) and (by + br) <= (p2y + ph)) then
+            bx_dir <= -vel;
+            bx <= -vel;
+            is_col <= 1;
+          end if;
+          
+          -- ball movement
+          bx <= bx + bx_dir;
+          by <= by + by_dir;
           
           -- ball collision
           if (grid((by + br) / block_size, (bx - br - offset) / block_size) = 1 or grid((by - br) / block_size, (bx - br - offset) / block_size) = 1) then
@@ -240,13 +257,6 @@ architecture Behavioral of VideoGame is
             by <= -vel;
             is_col <= 1;
           end if;
-          
-          -- ball movement
-          if (is_col = 0) then
-            bx <= bx + bx_dir;
-            by <= by + by_dir;
-          end if;
-          is_col <= 0;
 
           -- score
           if (grid((by + br) / block_size, (bx - br) / block_size) = 2 or grid((by - br) / block_size, (bx - br) / block_size) = 2) then
