@@ -62,7 +62,7 @@ architecture Behavioral of VideoGame is
   signal p2x : integer := 565;
   signal p2y : integer := 240;
 
-  type game_state is (START, RUN, FIN);
+  type game_state is (START, RUN, FIN, GONE);
   signal current_state : game_state := START;
 
   type vec2 is array (14 downto 0, 19 downto 0) of integer;
@@ -85,6 +85,26 @@ architecture Behavioral of VideoGame is
     (0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0),
     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
   );
+
+  signal is_face : integer := 0;
+  signal grid_face : vec2 := (
+    (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    (1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1),
+    (1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1),
+    (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    (1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    (1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1),
+    (1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1),
+    (1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1),
+    (1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1),
+    (1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1),
+    (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+    (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+  );
+  signal cell : integer := 0;
 
 ---------------------------------------------------------
 -- port maps
@@ -157,7 +177,13 @@ architecture Behavioral of VideoGame is
         gy <= vpos / block_size;
 
         if (gx <= 20 and gy <= 15) then
-          if (grid(gy, gx) = 1) then
+
+          cell <= grid(gy, gx);
+          if (is_face = 1) then
+            cell <= grid_face(gy, gx);
+          end if;
+
+          if (cell = 1) then
             col <= "111";
           else
             col <= "010";
@@ -165,6 +191,8 @@ architecture Behavioral of VideoGame is
         else 
           col <= "000";
         end if;
+
+
       end if;
     end if;
   end process;
@@ -176,9 +204,10 @@ architecture Behavioral of VideoGame is
         when START =>
           bx <= 320;
           by <= 240;
-			 p1y <= 240;
+          p1y <= 240;
           p2y <= 240;
-
+          is_face <= 0;
+          
           if (sleep = 0) then
             sleep <= 50;
           else
@@ -270,9 +299,21 @@ architecture Behavioral of VideoGame is
           else
             sleep <= sleep - 1;
             if (sleep = 1) then
+              current_state <= GONE;
+            end if;
+          end if;  
+        
+        when GONE =>
+        is_face <= 1;
+        if (sleep = 0) then
+            bx <= -100;
+            sleep <= 50;
+          else
+            sleep <= sleep - 1;
+            if (sleep = 1) then
               current_state <= START;
             end if;
-          end if;     
+          end if;
       end case;
     end if;
   end process;
