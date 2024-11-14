@@ -9,6 +9,7 @@ entity VideoGame is
     DAC_CLK : out std_logic;
     p1 : in std_logic;
     p2 : in std_logic;
+	 reset : in std_logic;
     hsync : out std_logic;
     vsync : out std_logic;
     Rout : out std_logic_vector(7 downto 0);
@@ -24,7 +25,7 @@ architecture Behavioral of VideoGame is
   component color_gen is
     port (
       clk : in std_logic;
-      col : in std_logic_vector(3 downto 0);
+      col : in std_logic_vector(2 downto 0);
       Rout : out std_logic_vector(7 downto 0);
       Bout : out std_logic_vector(7 downto 0);
       Gout : out std_logic_vector(7 downto 0)
@@ -34,7 +35,7 @@ architecture Behavioral of VideoGame is
 ---------------------------------------------------------
 -- signals
 ---------------------------------------------------------
-  signal col : std_logic_vector(3 downto 0);
+  signal col : std_logic_vector(2 downto 0);
   constant block_size : integer := 32;
   signal hpos : integer := 0;
   signal vpos : integer := 0;
@@ -44,13 +45,14 @@ architecture Behavioral of VideoGame is
   signal sleep : integer := 0;
 
   -- ball
-  constant br : integer := 10;
+  constant br : integer := 7;
   constant vel : integer := 2;
   constant offset : integer := 4;
   signal bx : integer := 320;
   signal by : integer := 240;
   signal bx_dir : integer := 2;
   signal by_dir : integer := 2;
+  signal is_col : integer := 0;
   
   -- paddle
   constant pw : integer := 5;
@@ -71,31 +73,18 @@ architecture Behavioral of VideoGame is
     (0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0),
     (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
     (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
-    (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
+    (2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2),
     (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
     (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2),
-    (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
+    (2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 2),
+    (2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 2),
     (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
     (0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0),
     (0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0),
     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
   );
-
----------------------------------------------------------
--- functions
----------------------------------------------------------
-function state_to_bin(state: cache_state) return std_logic_vector is
-  begin
-  case state is
-    when START => return "00";
-    when RUN => return "01";
-    when FIN => return "10";
-    when others => return "11";
-  end case;
-end function;
 
 ---------------------------------------------------------
 -- port maps
@@ -189,15 +178,34 @@ end function;
           by <= 240;
 
           if (sleep = 0) then
-            sleep <= 100;
+            sleep <= 50;
           else
             sleep <= sleep - 1;
-            if (sleep = 0) then
+            if (sleep = 1) then
               current_state <= RUN;
             end if;
           end if;
 
         when RUN =>
+
+          -- reset 
+          if (reset = '1') then
+            current_state <= FIN;
+          end if;
+
+          -- paddle restrictions
+          if ((p1y + ph) >= 480 - (block_size * 2)) then
+            p1y <= 480 - (block_size * 2) - ph;
+          elsif ((p1y - ph) <= (block_size * 2)) then
+            p1y <= (block_size * 2) + ph;
+          end if;
+
+          if ((p2y + ph) >= 480 - (block_size * 2)) then
+            p2y <= 480 - (block_size * 2) - ph;
+          elsif ((p2y - ph) <= (block_size * 2)) then
+            p2y <= (block_size * 2) + ph;          
+          end if;
+
           -- paddle movement
           if (p1 = '1') then
             p1y <= p1y - vel;
@@ -210,59 +218,54 @@ end function;
           else
             p2y <= p2y + vel;
           end if;
-
-          -- paddle restriction
-          if ((p1y + ph) > 480) then
-            p1y <= 480 - ph - block_size * 2.1;
-          elsif ((p1y - ph) < 0) then
-            p1y <= ph + block_size * 2.1;
-          end if;
-
-          if ((p2y + ph) > 480) then
-            p2y <= 480 - ph - block_size * 2.1;
-          elsif ((p2y - ph) < 0) then
-            p2y <= ph + block_size * 2.1;
-          end if;
           
           -- ball collision
           if (grid((by + br) / block_size, (bx - br - offset) / block_size) = 1 or grid((by - br) / block_size, (bx - br - offset) / block_size) = 1) then
             bx_dir <= vel;
             bx <= vel;
+            is_col <= 1;
           end if;
           if (grid((by + br) / block_size, (bx + br + offset) / block_size) = 1 or grid((by - br) / block_size, (bx + br + offset) / block_size) = 1) then
             bx_dir <= -vel;
             bx <= -vel;
+            is_col <= 1;
           end if;
           if (grid((by - br - offset) / block_size, (bx + br) / block_size) = 1 or grid((by - br - offset) / block_size, (bx - br) / block_size) = 1) then
             by_dir <= vel;
             by <= vel;
+            is_col <= 1;
           end if;
           if (grid((by + br + offset) / block_size, (bx + br) / block_size) = 1 or grid((by + br + offset) / block_size, (bx - br) / block_size) = 1) then
             by_dir <= -vel;
             by <= -vel;
+            is_col <= 1;
           end if;
           
           -- ball movement
-          bx <= bx + bx_dir;
-          by <= by + by_dir;
+          if (is_col = 0) then
+            bx <= bx + bx_dir;
+            by <= by + by_dir;
+          end if;
+          is_col <= 0;
 
           -- score
           if (grid((by + br) / block_size, (bx - br) / block_size) = 2 or grid((by - br) / block_size, (bx - br) / block_size) = 2) then
             current_state <= FIN;
-            winner <= '1';
+            winner <= '0';
           end if;
 
           if (grid((by + br) / block_size, (bx + br) / block_size) = 2 or grid((by - br) / block_size, (bx + br) / block_size) = 2) then
             current_state <= FIN;
-            winner <= '2';
+            winner <= '1';
           end if;
 
         when FIN =>
           if (sleep = 0) then
-            sleep <= 100;
+			   bx_dir <= -bx_dir;
+            sleep <= 50;
           else
             sleep <= sleep - 1;
-            if (sleep = 0) then
+            if (sleep = 1) then
               current_state <= START;
             end if;
           end if;     
