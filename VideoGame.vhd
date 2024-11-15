@@ -40,7 +40,7 @@ architecture Behavioral of VideoGame is
   signal hpos : integer := 0;
   signal vpos : integer := 0;
   signal video_strb : std_logic := '0';
-  signal clk2 : std_logic;
+  signal clk2 : std_logic := '0';
   signal winner : std_logic := '0';
   signal sleep : integer := 0;
 
@@ -94,7 +94,7 @@ architecture Behavioral of VideoGame is
     (1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1),
     (1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1),
     (1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1),
-    (1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1),
+    (1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1),
     (1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1),
     (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
     (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
@@ -136,15 +136,15 @@ architecture Behavioral of VideoGame is
     if (clk2'Event and clk2='1') then
 
       if (((640 + 16) <= hpos) and (hpos < (640 + 16 + 96))) then
-        hsync <= '1';
-      else
         hsync <= '0';
+      else
+        hsync <= '1';
       end if;
       
       if (((480 + 10) <= vpos) and (vpos < (480 + 10 + 2))) then
-        vsync <= '1';
-      else
         vsync <= '0';
+      else
+        vsync <= '1';
       end if;
 
       if (hpos = (640 + 16 + 96 + 48)) then
@@ -176,7 +176,7 @@ architecture Behavioral of VideoGame is
         gx <= hpos / block_size;
         gy <= vpos / block_size;
 
-        if (gx <= 20 and gy <= 15) then
+        if (gx < 20 and gy < 15) then
 
           cell <= grid(gy, gx);
           if (is_face = 1) then
